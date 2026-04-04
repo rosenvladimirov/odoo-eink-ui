@@ -136,14 +136,51 @@ html.o_eink_mode {
     }
 
     // ---- js-draw editor host ----
+    // Parent form cells need to allow the field to expand to full viewport
+    .o_field_widget.o_field_html,
+    .o_field_widget[name="body"],
+    .o_field_widget[name="note"] {
+        flex: 1 1 auto;
+        min-height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+
     .o_eink_note_field {
         border: 1px solid #000;
-        min-height: 400px;
         background: #FFF;
         position: relative;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: calc(100vh - 220px);
+        width: 100%;
 
-        .imageEditorContainer {
-            min-height: 400px;
+        // js-draw root container
+        > .imageEditorContainer {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 220px);
+            width: 100%;
         }
+
+        // js-draw rendering surface should fill
+        .clipboardHandler-svg,
+        .clipboardHandler-container,
+        .imageEditorRenderArea {
+            flex: 1 1 auto;
+            min-height: calc(100vh - 280px);
+            width: 100% !important;
+        }
+    }
+
+    // Form sheet: let the notebook/sheet expand too
+    .o_form_sheet_bg,
+    .o_form_sheet,
+    .o_inner_group,
+    .o_form_view .o_notebook,
+    .o_form_view .o_notebook_content {
+        min-height: auto;
     }
 }

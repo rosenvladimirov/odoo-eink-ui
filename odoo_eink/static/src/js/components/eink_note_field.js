@@ -9,15 +9,12 @@
 //
 // Storage: editor.toSVG().outerHTML → stored directly in the html field value.
 // Load:    editor.loadFromSVG(fieldValue) on mount.
-// Since SVG is valid HTML5 it renders in a normal browser without conversion.
 // ============================================================================
 import { Component, useRef, onMounted, onWillUnmount, markup } from "@odoo/owl";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
 
 export class EinkNoteField extends Component {
     static template = "odoo_eink.EinkNoteField";
-    // Accept any extra props the standard HtmlField would pass so we can be a
-    // drop-in replacement under ?eink=1
     static props = {
         ...standardFieldProps,
         "*": true,
@@ -28,12 +25,14 @@ export class EinkNoteField extends Component {
         this.editor = null;
         this._saveTimeout = null;
         this._lastSaved = "";
+        // Guard against saving before initial load completes
+        this._ready = false;
 
         onMounted(() => this._initEditor());
         onWillUnmount(() => this._destroyEditor());
     }
 
-    _initEditor() {
+    async _initEditor() {
         if (typeof window.jsdraw === "undefined") {
             console.warn("[eink] js-draw not loaded; falling back to text");
             this._renderFallback();
@@ -48,30 +47,47 @@ export class EinkNoteField extends Component {
         });
         this.toolbar = this.editor.addToolbar();
 
-        // Load existing SVG value if present
-        const value = this._fieldValue();
-        if (value) {
+        // Make editor fill the available height
+        try {
+            const innerEl = this.containerRef.el.querySelector(".imageEditorContainer");
+            if (innerEl) {
+                innerEl.style.height = "100%";
+                innerEl.style.minHeight = "600px";
+            }
+        } catch (e) {
+            /* ignore */
+        }
+
+        // Load existing SVG value if present — BEFORE wiring change listeners
+        // so the initial load doesn't trigger a save that overwrites the value.
+        const initialValue = this._fieldValue();
+        if (initialValue) {
             try {
-                const result = this.editor.loadFromSVG(value);
+                const result = this.editor.loadFromSVG(initialValue);
                 if (result && typeof result.then === "function") {
-                    result.catch((e) => console.warn("[eink] loadFromSVG failed", e));
+                    await result;
                 }
-                this._lastSaved = value;
+                this._lastSaved = initialValue;
             } catch (e) {
-                console.warn("[eink] loadFromSVG threw", e);
+                console.warn("[eink] loadFromSVG failed", e);
             }
         }
 
-        // Palm rejection: mark touch pointers so we know they're gesture-only
-        this._installPalmRejection();
+        // NOW it's safe to enable auto-save
+        this._ready = true;
 
-        // Debounced auto-save
         const onChange = () => {
+            if (!this._ready) return;
             if (this._saveTimeout) clearTimeout(this._saveTimeout);
-            this._saveTimeout = setTimeout(() => this._save(), 500);
+            this._saveTimeout = setTimeout(() => this._save(), 600);
         };
         this.editor.notifier.on(EditorEventType.CommandDone, onChange);
         this.editor.notifier.on(EditorEventType.CommandUndone, onChange);
+
+        // Palm rejection: mark touch pointers as gesture-only
+        this._installPalmRejection();
+
+        console.info("[eink] editor ready, initial value length:", initialValue.length);
     }
 
     _renderFallback() {
@@ -79,8 +95,7 @@ export class EinkNoteField extends Component {
         if (!el) return;
         el.innerHTML =
             '<div style="padding:1rem;border:1px solid #000;background:#fffbe6;">' +
-            "<strong>E Ink mode:</strong> js-draw library not loaded. " +
-            "HTML content will be read-only until the bundle is available." +
+            "<strong>E Ink mode:</strong> js-draw library not loaded." +
             "</div>";
     }
 
@@ -103,7 +118,6 @@ export class EinkNoteField extends Component {
         const record = this.props.record;
         if (!record || !record.data) return "";
         const v = record.data[this.props.name];
-        // html fields may arrive as markup() objects
         if (v && typeof v === "object" && "toString" in v) {
             return v.toString();
         }
@@ -111,16 +125,19 @@ export class EinkNoteField extends Component {
     }
 
     async _save() {
-        if (!this.editor) return;
+        if (!this.editor || !this._ready) return;
         try {
             const svgEl = this.editor.toSVG();
             const svg = svgEl && svgEl.outerHTML ? svgEl.outerHTML : "";
-            if (svg !== this._lastSaved) {
+            if (svg && svg !== this._lastSaved) {
                 this._lastSaved = svg;
+                console.info("[eink] saving SVG, length:", svg.length);
+                // html fields in Odoo 18 accept markup-wrapped strings
                 await this.props.record.update({ [this.props.name]: markup(svg) });
+                console.info("[eink] save ok");
             }
         } catch (e) {
-            console.warn("[eink] save failed", e);
+            console.error("[eink] save failed:", e);
         }
     }
 
@@ -134,14 +151,14 @@ export class EinkNoteField extends Component {
             this._palmRejectionCleanup = null;
         }
         if (this.editor) {
-            // Flush pending save synchronously (not awaited — we're unmounting)
+            // Flush pending save (fire-and-forget — unmounting)
             this._save();
             try {
                 if (typeof this.editor.remove === "function") {
                     this.editor.remove();
                 }
             } catch (e) {
-                // ignore
+                /* ignore */
             }
             this.editor = null;
         }
@@ -152,7 +169,6 @@ export const einkNoteField = {
     component: EinkNoteField,
     displayName: "E Ink Note Field",
     supportedTypes: ["html"],
-    // Accept HtmlField's props format so we don't crash when swapped over "html"
     extractProps: ({ attrs, options }) => ({
         placeholder: (attrs && attrs.placeholder) || "",
     }),

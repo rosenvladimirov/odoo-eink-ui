@@ -1,6 +1,6 @@
 {
     "name": "Odoo E Ink UI",
-    "version": "18.0.1.0.2",
+    "version": "18.0.1.0.3",
     "summary": "E Ink tablet UI optimization for BOOX, reMarkable and other e-paper devices",
     "description": """
 Odoo 18 E Ink tablet UI optimization.
