@@ -115,6 +115,33 @@ function resolveEinkState() {
     const epaper = isEpaperDevice();
     const urlVal = readUrlParam();
 
+    // ---- Auto-migration from earlier versions ----
+    // Previous versions (<= 18.0.1.0.4) set cookie + localStorage on ALL
+    // devices. On non-e-paper devices that's wrong — clean it up so desktops
+    // don't stay stuck.
+    if (!epaper) {
+        const hadPersistence =
+            getCookie(COOKIE_NAME) === "1" ||
+            (function () {
+                try {
+                    return localStorage.getItem(STORAGE_KEY) === "1";
+                } catch (e) {
+                    return false;
+                }
+            })();
+        if (hadPersistence) {
+            clearCookie(COOKIE_NAME);
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e) {
+                /* ignore */
+            }
+            console.info(
+                "[eink] migrated: cleared persistent state on non-e-paper device"
+            );
+        }
+    }
+
     if (urlVal === "1") {
         enableEink(epaper);
         return true;
