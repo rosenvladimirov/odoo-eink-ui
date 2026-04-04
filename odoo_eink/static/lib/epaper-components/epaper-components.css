@@ -50,12 +50,5 @@
     --epaper-min-tap: 44px;
 }
 
-/* Remove all effects on any element that wants the epaper base */
-.epaper * {
-    box-shadow: none !important;
-    text-shadow: none !important;
-    filter: none !important;
-    transition: none !important;
-    animation: none !important;
-    border-radius: 0 !important;
-}
+/* Tokens only — no global selectors. All styling is applied from
+ * eink_odoo.scss under html.o_eink_mode so it never leaks to non-eink users. */
