@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="odoo_eink.EinkNoteField">
+        <div class="o_eink_note_field" t-ref="container">
+            <!-- js-draw Editor is mounted here on componentMounted -->
+        </div>
+    </t>
+
+</templates>

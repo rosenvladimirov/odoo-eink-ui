@@ -1,0 +1,61 @@
+/* =============================================================================
+ * epaper-components — minimal E Ink design tokens
+ *
+ * Vendor CSS for e-paper devices. Exposes --epaper-* CSS custom properties
+ * that eink_odoo.scss maps onto Odoo's $o-* variables at runtime.
+ *
+ * License: MIT
+ * ============================================================================= */
+
+:root {
+    /* Surfaces */
+    --epaper-color-bg: #FFFFFF;
+    --epaper-color-surface: #FFFFFF;
+    --epaper-color-surface-alt: #F5F5F5;
+
+    /* Text */
+    --epaper-color-text: #000000;
+    --epaper-color-text-muted: #424242;
+
+    /* Brand / accent (kept neutral for e-paper) */
+    --epaper-color-primary: #000000;
+    --epaper-color-secondary: #333333;
+
+    /* Borders */
+    --epaper-color-border: #000000;
+    --epaper-color-border-light: #9E9E9E;
+
+    /* State — still monochrome */
+    --epaper-color-success: #000000;
+    --epaper-color-warning: #000000;
+    --epaper-color-danger: #000000;
+
+    /* Spacing (larger for stylus tap targets) */
+    --epaper-space-xs: 4px;
+    --epaper-space-sm: 8px;
+    --epaper-space-md: 16px;
+    --epaper-space-lg: 24px;
+    --epaper-space-xl: 32px;
+
+    /* Typography */
+    --epaper-font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+    --epaper-font-size-base: 16px;
+    --epaper-font-size-sm: 14px;
+    --epaper-font-size-lg: 18px;
+    --epaper-line-height-base: 1.6;
+
+    /* Tap targets — minimum 44px for stylus + finger */
+    --epaper-min-tap: 44px;
+}
+
+/* Remove all effects on any element that wants the epaper base */
+.epaper * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    transition: none !important;
+    animation: none !important;
+    border-radius: 0 !important;
+}

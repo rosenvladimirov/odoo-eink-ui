@@ -1,0 +1,36 @@
+// ============================================================================
+// E Ink primary variables — high contrast, no color, system font
+//
+// These are *defaults* (!default). When the user is not in eink mode, stock
+// Odoo variables win. When html.o_eink_mode is set, the eink_odoo.scss below
+// maps --epaper-* tokens onto these same variables at runtime via CSS vars.
+// ============================================================================
+
+// Colors — black/white only
+$o-brand-primary: #000000 !default;
+$o-brand-secondary: #333333 !default;
+$o-main-text-color: #000000 !default;
+$o-body-background-color: #FFFFFF !default;
+
+// Grayscale palette (no color tint)
+$o-gray-100: #FFFFFF !default;
+$o-gray-200: #F5F5F5 !default;
+$o-gray-300: #E0E0E0 !default;
+$o-gray-400: #BDBDBD !default;
+$o-gray-500: #9E9E9E !default;
+$o-gray-600: #757575 !default;
+$o-gray-700: #424242 !default;
+$o-gray-800: #212121 !default;
+$o-gray-900: #000000 !default;
+
+// Typography — system stack only, no webfonts
+$o-font-size-base: 1rem !default;
+$o-main-font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    system-ui,
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif !default;
