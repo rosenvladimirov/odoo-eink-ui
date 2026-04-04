@@ -9,8 +9,12 @@
 //
 // Storage: editor.toSVG().outerHTML → stored directly in the html field value.
 // Load:    editor.loadFromSVG(fieldValue) on mount.
+//
+// Hooks into Odoo's save lifecycle via the model bus (WILL_SAVE_URGENTLY and
+// NEED_LOCAL_CHANGES) so pending draws are flushed before the record saves.
 // ============================================================================
 import { Component, useRef, onMounted, onWillUnmount, markup } from "@odoo/owl";
+import { useBus } from "@web/core/utils/hooks";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
 
 export class EinkNoteField extends Component {
@@ -28,13 +32,22 @@ export class EinkNoteField extends Component {
         // Guard against saving before initial load completes
         this._ready = false;
 
+        // Hook into Odoo save lifecycle — flush pending draws before save.
+        const model = this.props.record && this.props.record.model;
+        if (model && model.bus) {
+            useBus(model.bus, "WILL_SAVE_URGENTLY", () => this._commitChanges());
+            useBus(model.bus, "NEED_LOCAL_CHANGES", ({ detail }) => {
+                detail.proms.push(this._commitChanges());
+            });
+        }
+
         onMounted(() => this._initEditor());
         onWillUnmount(() => this._destroyEditor());
     }
 
     async _initEditor() {
         if (typeof window.jsdraw === "undefined") {
-            console.warn("[eink] js-draw not loaded; falling back to text");
+            console.warn("[eink] js-draw not loaded; falling back");
             this._renderFallback();
             return;
         }
@@ -47,47 +60,48 @@ export class EinkNoteField extends Component {
         });
         this.toolbar = this.editor.addToolbar();
 
-        // Make editor fill the available height
+        // Fill available height
         try {
-            const innerEl = this.containerRef.el.querySelector(".imageEditorContainer");
-            if (innerEl) {
-                innerEl.style.height = "100%";
-                innerEl.style.minHeight = "600px";
+            const inner = this.containerRef.el.querySelector(".imageEditorContainer");
+            if (inner) {
+                inner.style.height = "100%";
+                inner.style.minHeight = "600px";
             }
         } catch (e) {
             /* ignore */
         }
 
-        // Load existing SVG value if present — BEFORE wiring change listeners
-        // so the initial load doesn't trigger a save that overwrites the value.
+        // Load existing SVG BEFORE wiring listeners, so initial load doesn't
+        // trigger an empty save.
         const initialValue = this._fieldValue();
         if (initialValue) {
             try {
-                const result = this.editor.loadFromSVG(initialValue);
-                if (result && typeof result.then === "function") {
-                    await result;
-                }
+                const p = this.editor.loadFromSVG(initialValue);
+                if (p && typeof p.then === "function") await p;
                 this._lastSaved = initialValue;
+                console.info("[eink] loaded initial SVG, length:", initialValue.length);
             } catch (e) {
                 console.warn("[eink] loadFromSVG failed", e);
             }
         }
 
-        // NOW it's safe to enable auto-save
+        // Now it's safe to enable auto-save
         this._ready = true;
 
         const onChange = () => {
             if (!this._ready) return;
-            if (this._saveTimeout) clearTimeout(this._saveTimeout);
-            this._saveTimeout = setTimeout(() => this._save(), 600);
+            // Flush pending draw to the record immediately (not debounced)
+            // so the model stays in sync. Odoo's own save debouncing takes
+            // care of not hammering the backend.
+            this._flushToRecord();
         };
         this.editor.notifier.on(EditorEventType.CommandDone, onChange);
         this.editor.notifier.on(EditorEventType.CommandUndone, onChange);
 
-        // Palm rejection: mark touch pointers as gesture-only
+        // Palm rejection
         this._installPalmRejection();
 
-        console.info("[eink] editor ready, initial value length:", initialValue.length);
+        console.info("[eink] editor ready");
     }
 
     _renderFallback() {
@@ -124,21 +138,35 @@ export class EinkNoteField extends Component {
         return v || "";
     }
 
-    async _save() {
+    /**
+     * Serialize the current editor state to SVG and push it into the record.
+     * Called on every draw command AND when Odoo fires WILL_SAVE_URGENTLY /
+     * NEED_LOCAL_CHANGES. Debounced internally to avoid thrashing.
+     */
+    async _flushToRecord() {
         if (!this.editor || !this._ready) return;
         try {
             const svgEl = this.editor.toSVG();
             const svg = svgEl && svgEl.outerHTML ? svgEl.outerHTML : "";
-            if (svg && svg !== this._lastSaved) {
-                this._lastSaved = svg;
-                console.info("[eink] saving SVG, length:", svg.length);
-                // html fields in Odoo 18 accept markup-wrapped strings
-                await this.props.record.update({ [this.props.name]: markup(svg) });
-                console.info("[eink] save ok");
-            }
+            if (!svg || svg === this._lastSaved) return;
+            this._lastSaved = svg;
+            console.info("[eink] flush to record, SVG length:", svg.length);
+            // Plain string works too; markup() tells Odoo not to re-escape.
+            await this.props.record.update({ [this.props.name]: markup(svg) });
+            console.info("[eink] record updated");
         } catch (e) {
-            console.error("[eink] save failed:", e);
+            console.error("[eink] flushToRecord failed:", e);
         }
+    }
+
+    /**
+     * Called synchronously when Odoo is about to save the record.
+     * Must return a promise that resolves when the field value is committed
+     * to the in-memory record.
+     */
+    async _commitChanges() {
+        console.info("[eink] commitChanges fired");
+        await this._flushToRecord();
     }
 
     _destroyEditor() {
@@ -151,8 +179,8 @@ export class EinkNoteField extends Component {
             this._palmRejectionCleanup = null;
         }
         if (this.editor) {
-            // Flush pending save (fire-and-forget — unmounting)
-            this._save();
+            // Final flush — fire-and-forget since we're unmounting
+            this._flushToRecord();
             try {
                 if (typeof this.editor.remove === "function") {
                     this.editor.remove();
