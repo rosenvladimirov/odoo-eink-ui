@@ -115,35 +115,21 @@ function resolveEinkState() {
     const epaper = isEpaperDevice();
     const urlVal = readUrlParam();
 
-    // ---- Auto-migration from earlier versions ----
-    // Previous versions (<= 18.0.1.0.4) set cookie + localStorage on ALL
-    // devices. On non-e-paper devices that's wrong — clean it up so desktops
-    // don't stay stuck.
-    if (!epaper) {
-        const hadPersistence =
-            getCookie(COOKIE_NAME) === "1" ||
-            (function () {
-                try {
-                    return localStorage.getItem(STORAGE_KEY) === "1";
-                } catch (e) {
-                    return false;
-                }
-            })();
-        if (hadPersistence) {
-            clearCookie(COOKIE_NAME);
-            try {
-                localStorage.removeItem(STORAGE_KEY);
-            } catch (e) {
-                /* ignore */
-            }
-            console.info(
-                "[eink] migrated: cleared persistent state on non-e-paper device"
-            );
-        }
-    }
-
+    // ---- User intent trumps UA detection ----
+    // Explicit `?eink=1` always switches to persistent mode (cookie +
+    // localStorage), regardless of what the user-agent string looks like.
+    // Custom firmware on BOOX Note Max, reMarkable web apps, and similar
+    // devices frequently mask their UA with generic Chrome/Android strings,
+    // so we can't rely on isEpaperDevice() alone.  If someone typed
+    // `?eink=1` they know what they're doing — honor it.
+    //
+    // Explicit `?eink=0` always disables and clears all persistence.
+    //
+    // When no URL param is present, we still fall back to heuristic
+    // persistence: cookies for auto-detected e-paper devices, session
+    // storage for desktops that previously opted in.
     if (urlVal === "1") {
-        enableEink(epaper);
+        enableEink(true);
         return true;
     }
     if (urlVal === "0") {
@@ -151,23 +137,33 @@ function resolveEinkState() {
         return false;
     }
 
-    // No URL param → check persistence appropriate for this device class
+    // No URL param → check persistence.
+    //   • Cookie / localStorage (persistent) — set by previous `?eink=1`
+    //     visit.  Kept for both e-paper and desktop users: removing it on
+    //     desktop would unstick testers but also break the "enable once
+    //     on BOOX, works forever" contract, which is the whole point.
+    //   • sessionStorage — legacy transient flag, still honored.
+    if (getCookie(COOKIE_NAME) === "1") return true;
+    try {
+        if (localStorage.getItem(STORAGE_KEY) === "1") {
+            // Re-seed the cookie so it survives cache clears that leave
+            // localStorage intact.
+            setCookie(COOKIE_NAME, "1", 365);
+            return true;
+        }
+    } catch (e) {
+        /* ignore */
+    }
+    try {
+        if (sessionStorage.getItem(STORAGE_KEY) === "1") return true;
+    } catch (e) {
+        /* ignore */
+    }
+    // Belt-and-braces: if auto-detection recognizes the UA as e-paper and
+    // no explicit opt-out was set, turn eink on by default.
     if (epaper) {
-        if (getCookie(COOKIE_NAME) === "1") return true;
-        try {
-            if (localStorage.getItem(STORAGE_KEY) === "1") {
-                setCookie(COOKIE_NAME, "1", 365);
-                return true;
-            }
-        } catch (e) {
-            /* ignore */
-        }
-    } else {
-        try {
-            if (sessionStorage.getItem(STORAGE_KEY) === "1") return true;
-        } catch (e) {
-            /* ignore */
-        }
+        enableEink(true);
+        return true;
     }
     return false;
 }
