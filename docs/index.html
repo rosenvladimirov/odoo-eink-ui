@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odoo E Ink UI</title>
+<meta name="description" content="The Odoo backend, readable on e-paper — &lt;b&gt;and the pen draws straight into the record&lt;/b&gt;.">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+:root{
+ --bg:#eceef2;--surface:#fbfcfd;--sunk:#e2e6ec;--ink:#141922;--soft:#404a58;--mut:#6d7888;--rule:#d3d9e1;
+ --ind:#3a3d8f;--ind-s:#e3e2f4;--co:#8a5a12;--co-s:#f3e9d6;--cm:#1f6d54;--cm-s:#dcefe6;--no:#8f3529;
+ --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono","JetBrains Mono","DejaVu Sans Mono",Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{
+ --bg:#0c1016;--surface:#151b24;--sunk:#10151d;--ink:#e8ecf1;--soft:#b3bcc8;--mut:#7d8896;--rule:#252d38;
+ --ind:#8f8ef0;--ind-s:#1e1d3a;--co:#d3a257;--co-s:#2c2413;--cm:#5cbf9c;--cm-s:#12281f;--no:#dd8479}}
+:root[data-theme="dark"]{
+ --bg:#0c1016;--surface:#151b24;--sunk:#10151d;--ink:#e8ecf1;--soft:#b3bcc8;--mut:#7d8896;--rule:#252d38;
+ --ind:#8f8ef0;--ind-s:#1e1d3a;--co:#d3a257;--co-s:#2c2413;--cm:#5cbf9c;--cm-s:#12281f;--no:#dd8479}
+:root[data-theme="light"]{
+ --bg:#eceef2;--surface:#fbfcfd;--sunk:#e2e6ec;--ink:#141922;--soft:#404a58;--mut:#6d7888;--rule:#d3d9e1;
+ --ind:#3a3d8f;--ind-s:#e3e2f4;--co:#8a5a12;--co-s:#f3e9d6;--cm:#1f6d54;--cm-s:#dcefe6;--no:#8f3529}
+html[lang="en"] .bg{display:none} html[lang="bg"] .en{display:none}
+.wrap{max-width:56rem;margin:0 auto;padding:0 1.25rem}
+a{color:var(--ind)} a:focus-visible,button:focus-visible{outline:2px solid var(--ind);outline-offset:2px}
+.skip{position:absolute;left:-999px}.skip:focus{left:1rem;top:1rem;background:var(--surface);padding:.5rem 1rem;border:1px solid var(--rule);z-index:30}
+header.top{border-bottom:2px solid var(--ink);padding:2.5rem 0 1.75rem}
+.kick{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ind);margin:0 0 .9rem}
+h1{font-size:clamp(1.8rem,4.4vw,2.7rem);line-height:1.08;letter-spacing:-.025em;margin:0 0 .8rem;font-weight:750;text-wrap:balance}
+.lede{font-size:1.12rem;color:var(--soft);margin:0 0 .7rem;max-width:44rem}
+.lede b{color:var(--ink);font-weight:650}
+.by{font-family:var(--mono);font-size:.75rem;color:var(--mut);margin-top:1.3rem;display:flex;flex-wrap:wrap;gap:.5rem 1.4rem}
+.by b{color:var(--ink)}
+.tag{display:inline-block;background:var(--ind);color:#fff;font-family:var(--mono);font-size:.7rem;font-weight:700;padding:.15em .55em;border-radius:3px;letter-spacing:.04em}
+:root[data-theme="dark"] .tag{color:#0c1016}
+section{margin-top:2.8rem}
+h2{font-size:1.4rem;font-weight:750;letter-spacing:-.02em;margin:0 0 .3rem;text-wrap:balance}
+.dek{color:var(--mut);font-size:.92rem;margin:0 0 1.3rem}
+p{margin:0 0 1rem} strong{font-weight:650}
+ul{margin:0 0 1rem;padding-left:1.2rem} li{margin:.3rem 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--sunk);padding:.1em .35em;border-radius:3px}
+pre{background:var(--sunk);border:1px solid var(--rule);border-radius:4px;padding:.9rem 1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.5;margin:0 0 1rem}
+pre code{background:none;padding:0}
+.scroll{overflow-x:auto;border:1px solid var(--rule);background:var(--surface);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th{font-family:var(--mono);font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:600;text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--rule);white-space:nowrap;background:var(--surface)}
+td{padding:.5rem .7rem;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.br{font-family:var(--mono);font-weight:650;white-space:nowrap}
+td.mods{font-family:var(--mono);font-size:.76rem;color:var(--soft)}
+.ed{font-family:var(--mono);font-size:.7rem;padding:.1em .45em;border-radius:3px;white-space:nowrap}
+.ed.ee{background:var(--co-s);color:var(--co)} .ed.oca{background:var(--cm-s);color:var(--cm)}
+.note{border-left:3px solid var(--co);background:var(--co-s);padding:.85rem 1rem;margin:0 0 1.2rem;font-size:.92rem}
+.note b{color:var(--no)}
+.ctrls{position:fixed;top:.8rem;right:.8rem;display:flex;gap:.4rem;z-index:20}
+.ctrls button{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:.3rem .65rem;font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--soft);cursor:pointer}
+.ctrls button.lng{color:var(--ind);border-color:var(--ind)}
+footer{margin-top:3.5rem;padding:1.5rem 0 3rem;border-top:1px solid var(--rule);font-size:.83rem;color:var(--mut)}
+footer a{color:var(--soft)}
+</style>
+<!-- Метрика на посещенията: собствен (self-hosted) GoatCounter на count.odoo-shell.dev.
+     Без бисквитки, без лични данни, без трети страни — GDPR-съобразен. -->
+<script data-goatcounter="https://count.odoo-shell.dev/count"
+        async src="https://count.odoo-shell.dev/count.js"></script>
+</head>
+<body>
+<a class="skip" href="#main"><span class="bg">Към съдържанието</span><span class="en">Skip to content</span></a>
+<div class="ctrls"><button id="lng" class="lng">EN</button><button id="thm">◑</button></div>
+<header class="top"><div class="wrap">
+ <p class="kick"><span class="bg">Odoo 18 · E Ink таблети</span><span class="en">Odoo 18 · E Ink tablets</span></p>
+ <h1>Odoo E Ink UI</h1>
+ <p class="lede"><span class="bg">Бекендът на Odoo, четим на електронно мастило — <b>и писалката рисува направо в записа</b>.</span><span class="en">The Odoo backend, readable on e-paper — <b>and the pen draws straight into the record</b>.</span></p>
+ <p class="by"><span><b>odoo_eink</b></span><span>Odoo 18.0</span><span><a href="https://github.com/rosenvladimirov/odoo-eink-ui">github.com/rosenvladimirov/odoo-eink-ui</a></span></p>
+</div></header>
+<main id="main"><div class="wrap">
+<section>
+ <h2><span class="bg">Какво прави</span><span class="en">What it does</span></h2>
+ <p><span class="bg">Модул за Odoo 18, който оптимизира бекенда за <strong>E Ink таблети</strong> —
+ BOOX Note Max 13.3″, reMarkable и подобни. Включва се при нужда с <code>?eink=1</code> в URL-а,
+ точно както <code>?debug=1</code>.</span>
+ <span class="en">An Odoo 18 module that optimizes the backend for <strong>E Ink tablets</strong> —
+ BOOX Note Max 13.3″, reMarkable and similar. Activated on demand with <code>?eink=1</code> in the URL,
+ exactly like <code>?debug=1</code>.</span></p>
+ <ul>
+  <li><span class="bg"><strong>Тема</strong> — черно върху бяло, без сенки, анимации, преходи и заоблявания;
+      контури вместо запълвания; само системни шрифтове.</span>
+      <span class="en"><strong>Theme</strong> — black on white, no shadows, animations, transitions or rounded
+      corners; borders over fills; system fonts only.</span></li>
+  <li><span class="bg"><strong>Рисуване в <code>html</code> полета</strong> — OWL компонент с редактора
+      js-draw (MIT): писалка, гума, текст, селекция, undo/redo, мащаб.</span>
+      <span class="en"><strong>Drawing in <code>html</code> fields</strong> — an OWL component hosting the
+      js-draw editor (MIT): pen, eraser, text, select, undo/redo, zoom.</span></li>
+  <li><span class="bg"><strong>Отхвърляне на дланта</strong> — рисува само <code>pointerType === 'pen'</code>;
+      докосването панорамира и мащабира.</span>
+      <span class="en"><strong>Palm rejection</strong> — only <code>pointerType === 'pen'</code> draws; touch
+      pans and zooms instead.</span></li>
+  <li><span class="bg"><strong>Чувствителност на натиска</strong> — през Pointer Events API; BOOX Pen 2 Plus
+      (Wacom EMR) я подава нативно.</span>
+      <span class="en"><strong>Pressure sensitivity</strong> — via the Pointer Events API; BOOX Pen 2 Plus
+      (Wacom EMR) reports it natively.</span></li>
+  <li><span class="bg"><strong>Съхранение като SVG</strong> — рисунката влиза направо в стойността на полето.
+      SVG е валиден HTML5, така че записът се отваря нормално и извън E Ink режим.</span>
+      <span class="en"><strong>SVG storage</strong> — the drawing goes straight into the field value. SVG is
+      valid HTML5, so the record renders normally outside E Ink mode too.</span></li>
+ </ul>
+</section>
+
+<section>
+ <h2><span class="bg">Върху какво работи</span><span class="en">Targets</span></h2>
+ <ul>
+  <li><code>note.note</code> <span class="bg">(Бележки)</span><span class="en">(Notes app)</span></li>
+  <li><code>mail.message</code> <span class="bg">(тела на съобщенията в chatter)</span><span class="en">(chatter message bodies)</span></li>
+  <li><span class="bg">всеки модел с <code>html</code> поле</span><span class="en">any model with an <code>html</code> field</span></li>
+ </ul>
+</section>
+
+<section>
+ <h2><span class="bg">Инсталация и употреба</span><span class="en">Install and use</span></h2>
+ <pre><code>cd /path/to/addons
+git clone -b 18.0 https://github.com/rosenvladimirov/odoo-eink-ui.git</code></pre>
+ <p><span class="bg">Обнови списъка с приложения и инсталирай „Odoo E Ink UI". После отвори произволен
+ бекенд адрес с добавено <code>?eink=1</code>:</span>
+ <span class="en">Update the app list and install "Odoo E Ink UI". Then open any backend URL with
+ <code>?eink=1</code> appended:</span></p>
+ <pre><code>https://myodoo.example.com/odoo?eink=1</code></pre>
+ <p><span class="bg">Параметърът се запазва при навигация чрез history patch — сесията остава в E Ink
+ режим, докато не го махнеш.</span>
+ <span class="en">The parameter is preserved across navigation by a history patch — the session stays in
+ E Ink mode until you drop it.</span></p>
+</section>
+
+</div></main>
+<footer><div class="wrap">
+ <p><span class="bg">Поддържа се от <b>Росен Владимиров</b> · правоносител <b>Терарос Комерс ЕООД</b>.</span>
+    <span class="en">Maintained by <b>Rosen Vladimirov</b> · rights holder <b>Terraros Commerce Ltd.</b></span></p>
+ <p><a href="https://rosenvladimirov.github.io/l10n-bulgaria/"><span class="bg">Пълен каталог на българската локализация</span><span class="en">Full catalog of the Bulgarian localization</span></a></p>
+</div></footer>
+<script>
+(function(){
+ var r=document.documentElement;
+ var t=localStorage.getItem('theme'); if(t) r.setAttribute('data-theme',t);
+ var l=localStorage.getItem('lang'); if(l) r.setAttribute('lang',l);
+ document.getElementById('lng').onclick=function(){
+   var n=r.getAttribute('lang')==='bg'?'en':'bg';
+   r.setAttribute('lang',n); localStorage.setItem('lang',n); this.textContent=n==='bg'?'EN':'BG';};
+ document.getElementById('thm').onclick=function(){
+   var cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+   var n=cur==='dark'?'light':'dark';
+   r.setAttribute('data-theme',n); localStorage.setItem('theme',n);};
+ document.getElementById('lng').textContent=r.getAttribute('lang')==='bg'?'EN':'BG';
+})();
+</script>
+</body>
+</html>
