@@ -17,7 +17,7 @@ Features:
 
 Hardware target: BOOX Note Max 13.3 with Wacom EMR stylus (Pen 2 Plus).
     """,
-    "author": "Rosen Vladimirov, BL Consulting",
+    "author": "Rosen Vladimirov, Terraros Commerce Ltd.",
     "license": "LGPL-3",
     "website": "https://github.com/rosenvladimirov/odoo-eink-ui",
     "category": "Tools",
